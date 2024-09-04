@@ -1,0 +1,141 @@
+import SwiftUI
+
+@main
+struct GuideBuddyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ListaDeDocumentosView()
+        }
+    }
+}
+
+
+
+// Separei no projeto original em 2 documentos (a lista de documentos e a view da pagina de adiçao/importaçao do arquivo, seja PDF ou imagem)
+
+//1st file
+
+import SwiftUI
+
+struct ListaDeDocumentosView: View {
+    let documentos = [
+    
+        Documento(titulo: "Passaporte"),
+        Documento(titulo: "Comprovante de residência"),
+        Documento(titulo: "Carta de aceite universitário"),
+        Documento(titulo: "Passagens"),
+        Documento(titulo: "Comprovante financeiro"),
+        Documento(titulo: "Visto de Estudo"),
+        Documento(titulo: "Carta de Indicação"),
+        Documento(titulo: "CPF"),
+        Documento(titulo: "Histórico Escolar"),
+        Documento(titulo: "Laudos Médicos")
+        
+    ]
+    
+    var body: some View {
+        NavigationView {
+            List(documentos) { doc in
+                NavigationLink(destination: AdicionarDocumento(documento: doc)) {
+                    Text(doc.titulo)
+                }
+            }
+            .navigationTitle("Documentos")
+        }
+    }
+    
+}
+
+struct Documento: Identifiable {
+    let id = UUID()
+    let titulo: String
+}
+
+#Preview {
+    ListaDeDocumentosView()
+}
+
+
+
+// 2nd file
+
+
+import SwiftUI
+
+struct AdicionarDocumento: View {
+    let documento: Documento
+    @State private var isImporting = false
+    @State private var fileURL: URL? = nil // Armazena a URL do arquivo importado
+    @State private var fileContent: String = "" // Armazena o conteúdo do arquivo
+    
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading) {
+                Text(documento.titulo)
+                    .font(.headline)
+                    .padding(24)
+                
+                ScrollView {
+                    LazyVGrid(columns: [.init(), .init(), .init()]) {
+                        Button(action: {
+                            isImporting = true
+                        }) {
+                            Image(systemName: "plus")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 30, height: 30)
+                                .padding(40)
+                        }
+                        .background(Color(white: 0.9))
+                        .clipShape(RoundedRectangle(cornerRadius: 12.0))
+                        .foregroundColor(.white)
+                        
+                        Spacer()
+                    }
+                }
+                
+                if let fileURL = fileURL {
+                    Text("Arquivo Importado: \(fileURL.lastPathComponent)")
+                        .padding()
+                }
+                
+                if !fileContent.isEmpty {
+                    Text("Conteúdo do Arquivo:")
+                        .font(.headline)
+                        .padding(.top)
+                    Text(fileContent)
+                        .padding()
+                }
+            }
+            .fileImporter(isPresented: $isImporting,
+                          allowedContentTypes: [.pdf, .image]) { result in
+                switch result {
+                case .success(let url):
+                    self.fileURL = url
+                    do {
+                        let content = try read(from: url)
+                        self.fileContent = content
+                        print("Conteúdo do arquivo importado: \(content)")
+                    } catch {
+                        print("Erro ao ler o arquivo: \(error.localizedDescription)")
+                    }
+                case .failure(let error):
+                    print("Erro ao importar o arquivo: \(error.localizedDescription)")
+                }
+            }
+            .navigationTitle("Detalhes")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+    
+    func read(from url: URL) throws -> String {
+        return try String(contentsOf: url, encoding: .utf8)
+    }
+}
+
+
+struct AdicionarDocumento_Previews: PreviewProvider {
+    static var previews: some View {
+        AdicionarDocumento(documento: Documento(titulo: "Passaporte"))
+    }
+}
